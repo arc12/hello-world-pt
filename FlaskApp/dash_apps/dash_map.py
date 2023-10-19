@@ -1,10 +1,10 @@
-import logging
+# import logging
 
 from pg_shared.dash_utils import create_dash_app_util
 from plaything import core, menu, Langstrings
 from flask import session
 
-from dash import html, dcc
+from dash import html, dcc, callback_context, no_update
 
 from dash.dependencies import Output, Input, State
 
@@ -47,13 +47,24 @@ def create_dash(server, url_rule, url_base_pathname):
     ],
     className="wrapper"
     )
-
+    
+    # This callback handles: A) initial setup of the menu, langstring labels, drop-down options (also langstrings) AND B) the chart.
+    # The callback_context is used to control whether or not A updates occur, as this should only occur on initial page load.
+    # Doing this saves having two call-backs on the first page load, one for each of A and B
     @app.callback(
-        [Output("pop_chart", "figure")],
-        [Input("show", "value"), State("location", "pathname"), State("location", "search")],
+        [
+            Output("menu", "children"),
+            Output("heading", "children"),
+            Output("show_label", "children"),
+            Output("show", "options"),
+            Output("pop_chart", "figure")  # chart is last
+        ],
+        [
+            Input("show", "value"),  # the default value is set in the layout, so we will get the right chart output
+            Input("location", "pathname"),
+            Input("location", "search")],
     )
     def update_chart(show, pathname, querystring):
-        
         specification_id = pathname.split('/')[-1]
         tag = None
         if len(querystring) > 0:
@@ -61,11 +72,23 @@ def create_dash(server, url_rule, url_base_pathname):
                 if param == "tag":
                     tag = value
                     break
-        
-        # TODO find a method for capturing the initial referrer. (the referrer in a callback IS the page itself)
-        core.record_activity(view_name, specification_id, session, activity={"opt": show}, referrer="(callback)", tag=tag)
         spec = core.get_specification(specification_id)
         langstrings = Langstrings(spec.lang)
+    
+        if callback_context.triggered_id == "location":
+            # initial load
+            menu_children = spec.make_menu(menu, langstrings, core.plaything_root, view_name, query_string=querystring, for_dash=True)
+            show_options = {k: langstrings.get(k) for k in ["POP", "YEARLY_CHANGE"]}
+            output = [
+                menu_children,
+                langstrings.get("POP"),
+                langstrings.get("SHOW_LABEL"),
+                show_options]
+        else:
+            output = [no_update] * 4
+
+        # TODO find a method for capturing the initial referrer. (the referrer in a callback IS the page itself)
+        core.record_activity(view_name, specification_id, session, activity={"opt": show}, referrer="(callback)", tag=tag)
         data = spec.load_asset_dataframe("world_pop")
 
         data_chunk = [
@@ -90,28 +113,8 @@ def create_dash(server, url_rule, url_base_pathname):
             # "colorway": line_colours
         }
 
-        figure = {"data": data_chunk, "layout": layout_chunk}
+        output.append({"data": data_chunk, "layout": layout_chunk})
 
-        return [figure]
-
-    @app.callback(
-        [Output("menu", "children"), Output("heading", "children"), Output("show_label", "children"), Output("show", "options")],
-        [Input("location", "pathname"), Input("location", "search")],
-    )
-    def setup_initial(pathname, querystring):
-        specification_id = pathname.split('/')[-1]
-        spec = core.get_specification(specification_id)
-        
-        langstrings = Langstrings(spec.lang)
-
-        menu_children = spec.make_menu(menu, langstrings, core.plaything_root, view_name, query_string=querystring, for_dash=True)
-
-        show_options = {k: langstrings.get(k) for k in ["POP", "YEARLY_CHANGE"]}
-        
-        return [
-            menu_children,
-            langstrings.get("POP"),
-            langstrings.get("SHOW_LABEL"),
-            show_options]
+        return output
 
     return app.server
