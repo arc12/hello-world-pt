@@ -1,8 +1,10 @@
-from pg_shared.dash_utils import create_dash_app_util
-from plaything import PLAYTHING_NAME, core, menu, Langstrings
-from flask import request, session
+import logging
 
-from dash import html, dcc, ctx
+from pg_shared.dash_utils import create_dash_app_util
+from plaything import core, menu, Langstrings
+from flask import session
+
+from dash import html, dcc
 
 from dash.dependencies import Output, Input, State
 
@@ -21,7 +23,7 @@ def create_dash(server, url_rule, url_base_pathname):
         html.Div(id="menu"),
         html.Div(
             [
-                html.H1("Pop chart", id="heading", className="header-title")
+                html.H1("World Population", id="heading", className="header-title")
             ],
             className="header"),
 
@@ -59,10 +61,9 @@ def create_dash(server, url_rule, url_base_pathname):
                 if param == "tag":
                     tag = value
                     break
-
+        
         # TODO find a method for capturing the initial referrer. (the referrer in a callback IS the page itself)
         core.record_activity(view_name, specification_id, session, activity={"opt": show}, referrer="(callback)", tag=tag)
-        
         spec = core.get_specification(specification_id)
         langstrings = Langstrings(spec.lang)
         data = spec.load_asset_dataframe("world_pop")

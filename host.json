@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "logging": {
-    "tracing": {"consoleLevel": "verbose"},
+    "logLevel": {"default": "Information"},
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
