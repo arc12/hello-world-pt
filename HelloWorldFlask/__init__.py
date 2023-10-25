@@ -4,8 +4,8 @@ import logging
 from flask import Flask, render_template, session, request, abort, Blueprint
 
 from pg_shared import prepare_app
-from FlaskApp.dash_apps import dash_map
-from plaything import PLAYTHING_NAME, Langstrings, core, menu
+from HelloWorldFlask.dash_apps import dash_map
+from hello_world import PLAYTHING_NAME, Langstrings, core, menu
 
 plaything_root = core.plaything_root
 

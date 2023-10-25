@@ -1,7 +1,7 @@
 # import logging
 
 from pg_shared.dash_utils import create_dash_app_util
-from plaything import core, menu, Langstrings
+from hello_world import core, menu, Langstrings
 from flask import session
 
 from dash import html, dcc, callback_context, no_update
