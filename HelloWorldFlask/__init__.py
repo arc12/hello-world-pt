@@ -1,9 +1,10 @@
-from os import  environ
-import logging
+# from os import  environ
+# import logging
 
 from flask import Flask, render_template, session, request, abort, Blueprint
 
 from pg_shared import prepare_app
+from pg_shared.dash_utils import add_dash_to_routes
 from HelloWorldFlask.dash_apps import dash_map
 from hello_world import PLAYTHING_NAME, Langstrings, core, menu
 
@@ -36,15 +37,11 @@ def validate():
 def hello(specification_id: str):
     view_name = "hello"
 
-    if specification_id not in core.specification_ids:
-        msg = f"Request with invalid specification id = {specification_id} for plaything {PLAYTHING_NAME}"
-        logging.warn(msg)
-        abort(404, msg)
-
-    core.record_activity(view_name, specification_id, session, referrer=request.referrer, tag=request.args.get("tag", None))
-    
     spec = core.get_specification(specification_id)
     langstrings = Langstrings(spec.lang)
+    
+    core.record_activity(view_name, specification_id, session, referrer=request.referrer, tag=request.args.get("tag", None))
+
     return render_template("hello.html",
                            langstrings=langstrings,
                            top_menu=spec.make_menu(menu, langstrings, plaything_root, view_name, query_string=request.query_string.decode()))
@@ -53,12 +50,13 @@ def hello(specification_id: str):
 def about(specification_id: str):
     view_name = "about"
 
-    core.record_activity(view_name, specification_id, session, referrer=request.referrer, tag=request.args.get("tag", None))
     spec = core.get_specification(specification_id)
-    if "about" not in spec.asset_map:
-        abort(404, "'about' is not configured")
-
     langstrings = Langstrings(spec.lang)
+    
+    if "about" not in spec.asset_map:
+        abort(404, "'about' is not configured")  
+
+    core.record_activity(view_name, specification_id, session, referrer=request.referrer, tag=request.args.get("tag", None))
 
     return render_template("about.html",
                            about=spec.load_asset_markdown(view_name, render=True),
@@ -68,4 +66,5 @@ app = prepare_app(Flask(__name__), url_prefix=plaything_root)
 app.register_blueprint(pt_bp, url_prefix=plaything_root)
 
 # DASH Apps and route spec. NB these do need the URL prefix
-app = dash_map.create_dash(app, f"{plaything_root}/chart/<specification_id>", f"{plaything_root}/dash/chart/")
+add_dash_to_routes(app, dash_map, plaything_root)
+# app = dash_map.create_dash(app, f"{plaything_root}/chart/<specification_id>", f"{plaything_root}/dash/chart/")
