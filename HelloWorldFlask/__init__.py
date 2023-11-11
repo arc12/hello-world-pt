@@ -32,6 +32,10 @@ def validate():
                            specifications=core.get_specifications(include_disabled=True, check_assets=["world_pop"], check_optional_assets=["about"]),
                            with_link=False)
 
+@pt_bp.route("/ping")
+def ping():
+    return "OK"
+
 @pt_bp.route("/hello/<specification_id>", methods=['GET'])
 # view name = "hello", the initial view
 def hello(specification_id: str):
